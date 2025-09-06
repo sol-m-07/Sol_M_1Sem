@@ -1,21 +1,21 @@
 name: Show date and time
->
-> on:
->   push:
->     branches: ['**']
->   pull_request:
->     branches: ['**']
->
-> jobs:
->   show-datetime:
->     name: Show current date and time
->     runs-on: ubuntu-latest
->
->     steps:
->     - name: Checkout code
->       uses: actions/checkout@v4
->
->     - name: Display current date and time
->       run: |
->         echo "Current date and time: $(date)"
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  show-datetime:
+    name: Show current date and time
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Display current date and time
+      run: |
+        echo "Current date and time: $(date)"
 
