@@ -14,7 +14,7 @@ class FileProcessorTest {
     FileProcessor processor = new FileProcessor();
 
     Path testFile = Files.createTempFile("test", ".dat");
-    byte[] testData = new byte[1500]; // 1.5KB данных
+    byte[] testData = new byte[1500];
     new Random().nextBytes(testData);
     Files.write(testFile, testData);
 
