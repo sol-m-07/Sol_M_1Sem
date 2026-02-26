@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * REST-контроллер для CRUD-операций над задачами и проверки работы DI.
+ * REST-контроллер для CRUD-операций над задачами.
  */
 @RestController
 @RequestMapping("/api/tasks")
