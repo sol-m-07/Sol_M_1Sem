@@ -2,9 +2,9 @@ name: Build and Test
 
 on:
   push:
-    branches: [ main, master, hometask_1 ]
+    branches: [ main, master, hometask_1, hometask_2 ]
   pull_request:
-    branches: [ main, master, hometask_1 ]
+    branches: [ main, master, hometask_1, hometask_2 ]
 
 jobs:
   build:
