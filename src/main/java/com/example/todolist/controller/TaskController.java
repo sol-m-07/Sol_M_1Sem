@@ -1,10 +1,22 @@
 package com.example.todolist.controller;
 
+import com.example.todolist.dto.TaskCreateDto;
+import com.example.todolist.dto.TaskResponseDto;
+import com.example.todolist.dto.TaskUpdateDto;
+import com.example.todolist.mapper.TaskMapper;
 import com.example.todolist.model.Task;
 import com.example.todolist.service.TaskService;
 import com.example.todolist.service.TaskStatisticsService;
+import com.example.todolist.validation.OnCreate;
+import com.example.todolist.validation.OnUpdate;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,60 +29,106 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 
-/**
- * REST-контроллер для CRUD-операций над задачами.
- */
 @RestController
 @RequestMapping("/api/tasks")
+@Tag(name = "Tasks", description = "CRUD-операции над задачами")
 public class TaskController {
 
     private final TaskService taskService;
     private final TaskStatisticsService taskStatisticsService;
+    private final TaskMapper taskMapper;
 
-    public TaskController(TaskService taskService, TaskStatisticsService taskStatisticsService) {
+    @Value("${api.version}")
+    private String apiVersion;
+
+    public TaskController(TaskService taskService,
+                          TaskStatisticsService taskStatisticsService,
+                          TaskMapper taskMapper) {
         this.taskService = taskService;
         this.taskStatisticsService = taskStatisticsService;
+        this.taskMapper = taskMapper;
     }
 
     @GetMapping
-    public List<Task> getAllTasks() {
-        return taskService.findAll();
+    @Operation(summary = "Получить все задачи", description = "Возвращает список всех задач")
+    @ApiResponse(responseCode = "200", description = "Список задач получен")
+    public ResponseEntity<List<TaskResponseDto>> getAllTasks() {
+        List<Task> tasks = taskService.findAll();
+        List<TaskResponseDto> dtos = tasks.stream()
+                .map(taskMapper::toResponseDto)
+                .toList();
+        return ResponseEntity.ok()
+                .header("X-Total-Count", String.valueOf(tasks.size()))
+                .header("X-API-Version", apiVersion)
+                .body(dtos);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Task> getTaskById(@PathVariable Long id) {
-        return taskService.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @Operation(summary = "Получить задачу по ID")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Задача найдена"),
+            @ApiResponse(responseCode = "404", description = "Задача не найдена")
+    })
+    public ResponseEntity<TaskResponseDto> getTaskById(@PathVariable Long id) {
+        Task task = taskService.findById(id);
+        return ResponseEntity.ok()
+                .header("X-API-Version", apiVersion)
+                .body(taskMapper.toResponseDto(task));
     }
 
     @PostMapping
-    public ResponseEntity<Task> createTask(@RequestBody Task task) {
-        Task saved = taskService.save(task);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    @Operation(summary = "Создать задачу", description = "Создаёт новую задачу")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Задача создана"),
+            @ApiResponse(responseCode = "400", description = "Невалидные данные")
+    })
+    public ResponseEntity<TaskResponseDto> createTask(
+            @Validated(OnCreate.class) @RequestBody TaskCreateDto dto) {
+        Task task = taskMapper.toEntity(dto);
+        Task saved = taskService.create(task);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .header("X-API-Version", apiVersion)
+                .body(taskMapper.toResponseDto(saved));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Task> updateTask(@PathVariable Long id, @RequestBody Task task) {
-        if (!taskService.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-        task.setId(id);
-        Task updated = taskService.save(task);
-        return ResponseEntity.ok(updated);
+    @Operation(summary = "Обновить задачу", description = "Обновляет существующую задачу по ID")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Задача обновлена"),
+            @ApiResponse(responseCode = "400", description = "Невалидные данные"),
+            @ApiResponse(responseCode = "404", description = "Задача не найдена")
+    })
+    public ResponseEntity<TaskResponseDto> updateTask(
+            @PathVariable Long id,
+            @Validated(OnUpdate.class) @RequestBody TaskUpdateDto dto) {
+        Task existing = taskService.findById(id);
+        dto.setCreatedAt(existing.getCreatedAt());
+        taskMapper.updateEntity(dto, existing);
+        Task updated = taskService.save(existing);
+        return ResponseEntity.ok()
+                .header("X-API-Version", apiVersion)
+                .body(taskMapper.toResponseDto(updated));
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "Удалить задачу")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Задача удалена"),
+            @ApiResponse(responseCode = "404", description = "Задача не найдена")
+    })
     public ResponseEntity<Void> deleteTask(@PathVariable Long id) {
-        if (!taskService.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
         taskService.deleteById(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.noContent()
+                .header("X-API-Version", apiVersion)
+                .build();
     }
 
     @GetMapping("/statistics")
-    public Map<String, Object> getStatistics() {
-        return taskStatisticsService.getRepositoryComparison();
+    @Operation(summary = "Статистика репозиториев", description = "Сравнение основного и stub-репозитория")
+    @ApiResponse(responseCode = "200", description = "Статистика получена")
+    public ResponseEntity<Map<String, Object>> getStatistics() {
+        return ResponseEntity.ok()
+                .header("X-API-Version", apiVersion)
+                .body(taskStatisticsService.getRepositoryComparison());
     }
 }
