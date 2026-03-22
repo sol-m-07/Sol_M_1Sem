@@ -1,5 +1,6 @@
 package com.example.todolist.service;
 
+import com.example.todolist.exception.TaskNotFoundException;
 import com.example.todolist.model.Task;
 import com.example.todolist.repository.TaskRepository;
 import jakarta.annotation.PostConstruct;
@@ -11,15 +12,11 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Сервис для работы с задачами. Инжектирует репозиторий через конструктор.
- * Поддерживает кэш задач, инициализацию при старте и сохранение статистики при остановке.
- */
 @Service
 public class TaskService {
 
@@ -27,18 +24,12 @@ public class TaskService {
 
     private final TaskRepository taskRepository;
 
-    /**
-     * Кэш задач в памяти (ключ — id задачи в виде строки).
-     */
     private final Map<String, Task> taskCache = new ConcurrentHashMap<>();
 
     public TaskService(TaskRepository taskRepository) {
         this.taskRepository = taskRepository;
     }
 
-    /**
-     * При старте приложения загружает предопределённые задачи из репозитория в кэш.
-     */
     @PostConstruct
     public void initCache() {
         List<Task> tasks = taskRepository.findAll();
@@ -50,9 +41,6 @@ public class TaskService {
         log.info("[TaskService] Cache initialized with {} tasks from repository", taskCache.size());
     }
 
-    /**
-     * Перед уничтожением бина логирует размер кэша и сохраняет статистику в файл.
-     */
     @PreDestroy
     public void cleanup() {
         int count = taskCache.size();
@@ -76,8 +64,18 @@ public class TaskService {
         return taskRepository.findAll();
     }
 
-    public Optional<Task> findById(Long id) {
-        return taskRepository.findById(id);
+    public Task findById(Long id) {
+        return taskRepository.findById(id)
+                .orElseThrow(() -> new TaskNotFoundException(id));
+    }
+
+    public Task create(Task task) {
+        task.setCreatedAt(LocalDateTime.now());
+        Task saved = taskRepository.save(task);
+        if (saved.getId() != null) {
+            taskCache.put(saved.getId().toString(), saved);
+        }
+        return saved;
     }
 
     public Task save(Task task) {
@@ -89,10 +87,11 @@ public class TaskService {
     }
 
     public void deleteById(Long id) {
-        taskRepository.deleteById(id);
-        if (id != null) {
-            taskCache.remove(id.toString());
+        if (!taskRepository.existsById(id)) {
+            throw new TaskNotFoundException(id);
         }
+        taskRepository.deleteById(id);
+        taskCache.remove(id.toString());
     }
 
     public boolean existsById(Long id) {
