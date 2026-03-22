@@ -3,12 +3,34 @@ server:
 
 app:
   name: To-Do List Manager
-  version: 1.0.0
+  version: 2.0.0
+
+api:
+  version: 2.0.0
 
 spring:
   application:
     name: todo-list-manager
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+
+upload:
+  directory: uploads
 
 logging:
   level:
     root: INFO
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
