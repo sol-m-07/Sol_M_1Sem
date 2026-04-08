@@ -1,12 +1,13 @@
 package com.example.todolist.controller;
 
 import com.example.todolist.dto.TaskCreateDto;
+import com.example.todolist.dto.TaskPriorityCountDto;
 import com.example.todolist.dto.TaskResponseDto;
 import com.example.todolist.dto.TaskUpdateDto;
 import com.example.todolist.mapper.TaskMapper;
 import com.example.todolist.model.Task;
 import com.example.todolist.service.TaskService;
-import com.example.todolist.service.TaskStatisticsService;
+import com.example.todolist.service.TaskStatisticsJdbcService;
 import com.example.todolist.validation.OnCreate;
 import com.example.todolist.validation.OnUpdate;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,7 +28,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/tasks")
@@ -35,17 +35,17 @@ import java.util.Map;
 public class TaskController {
 
     private final TaskService taskService;
-    private final TaskStatisticsService taskStatisticsService;
+    private final TaskStatisticsJdbcService taskStatisticsJdbcService;
     private final TaskMapper taskMapper;
 
     @Value("${api.version}")
     private String apiVersion;
 
     public TaskController(TaskService taskService,
-                          TaskStatisticsService taskStatisticsService,
+                          TaskStatisticsJdbcService taskStatisticsJdbcService,
                           TaskMapper taskMapper) {
         this.taskService = taskService;
-        this.taskStatisticsService = taskStatisticsService;
+        this.taskStatisticsJdbcService = taskStatisticsJdbcService;
         this.taskMapper = taskMapper;
     }
 
@@ -123,12 +123,41 @@ public class TaskController {
                 .build();
     }
 
-    @GetMapping("/statistics")
-    @Operation(summary = "Статистика репозиториев", description = "Сравнение основного и stub-репозитория")
-    @ApiResponse(responseCode = "200", description = "Статистика получена")
-    public ResponseEntity<Map<String, Object>> getStatistics() {
+    @PostMapping("/bulk-complete")
+    @Operation(summary = "Пакетное завершение задач",
+               description = "Помечает список задач как выполненные (транзакционно)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Задачи обновлены"),
+            @ApiResponse(responseCode = "400", description = "Одна из задач не найдена — откат")
+    })
+    public ResponseEntity<Void> bulkCompleteTasks(@RequestBody List<Long> ids) {
+        taskService.bulkCompleteTasks(ids);
         return ResponseEntity.ok()
                 .header("X-API-Version", apiVersion)
-                .body(taskStatisticsService.getRepositoryComparison());
+                .build();
+    }
+
+    @GetMapping("/with-attachments")
+    @Operation(summary = "Получить задачи с вложениями",
+               description = "Загружает задачи вместе с вложениями (решение N+1)")
+    @ApiResponse(responseCode = "200", description = "Список задач с вложениями")
+    public ResponseEntity<List<TaskResponseDto>> getAllTasksWithAttachments() {
+        List<Task> tasks = taskService.findAllWithAttachments();
+        List<TaskResponseDto> dtos = tasks.stream()
+                .map(taskMapper::toResponseDto)
+                .toList();
+        return ResponseEntity.ok()
+                .header("X-API-Version", apiVersion)
+                .body(dtos);
+    }
+
+    @GetMapping("/statistics")
+    @Operation(summary = "Статистика по приоритетам",
+               description = "Количество задач по приоритетам (JDBC)")
+    @ApiResponse(responseCode = "200", description = "Статистика получена")
+    public ResponseEntity<List<TaskPriorityCountDto>> getStatistics() {
+        return ResponseEntity.ok()
+                .header("X-API-Version", apiVersion)
+                .body(taskStatisticsJdbcService.getTasksCountByPriority());
     }
 }
