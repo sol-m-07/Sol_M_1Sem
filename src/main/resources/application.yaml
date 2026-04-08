@@ -21,6 +21,10 @@ spring:
   web:
     resources:
       add-mappings: false
+  jpa:
+    open-in-view: false
+  flyway:
+    enabled: true
 
 upload:
   directory: uploads
