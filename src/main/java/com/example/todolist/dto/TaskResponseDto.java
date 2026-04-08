@@ -25,6 +25,9 @@ public class TaskResponseDto {
     @Schema(description = "Дата и время создания")
     private LocalDateTime createdAt;
 
+    @Schema(description = "Дата и время обновления")
+    private LocalDateTime updatedAt;
+
     @Schema(description = "Срок выполнения", example = "2026-12-31")
     private LocalDate dueDate;
 
@@ -72,6 +75,14 @@ public class TaskResponseDto {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
     public LocalDate getDueDate() {

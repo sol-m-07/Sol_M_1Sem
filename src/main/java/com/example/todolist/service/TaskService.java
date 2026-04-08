@@ -1,5 +1,6 @@
 package com.example.todolist.service;
 
+import com.example.todolist.exception.BulkOperationException;
 import com.example.todolist.exception.TaskNotFoundException;
 import com.example.todolist.model.Task;
 import com.example.todolist.repository.TaskRepository;
@@ -8,14 +9,13 @@ import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class TaskService {
@@ -24,77 +24,79 @@ public class TaskService {
 
     private final TaskRepository taskRepository;
 
-    private final Map<String, Task> taskCache = new ConcurrentHashMap<>();
-
     public TaskService(TaskRepository taskRepository) {
         this.taskRepository = taskRepository;
     }
 
     @PostConstruct
-    public void initCache() {
-        List<Task> tasks = taskRepository.findAll();
-        for (Task task : tasks) {
-            if (task.getId() != null) {
-                taskCache.put(task.getId().toString(), task);
-            }
-        }
-        log.info("[TaskService] Cache initialized with {} tasks from repository", taskCache.size());
+    public void init() {
+        log.info("[TaskService] initialized");
     }
 
     @PreDestroy
     public void cleanup() {
-        int count = taskCache.size();
-        log.info("[TaskService] PreDestroy: clearing cache, current task count = {}", count);
-        try {
-            Path statsFile = Path.of("task-service-stats.txt");
-            String content = String.format("TaskService shutdown stats%ntasks in cache: %d%n", count);
-            Files.writeString(statsFile, content);
-            log.info("[TaskService] Statistics saved to {}", statsFile.toAbsolutePath());
-        } catch (IOException e) {
-            log.warn("[TaskService] Failed to save statistics to file", e);
-        }
-        taskCache.clear();
+        log.info("[TaskService] shutting down");
     }
 
-    public Map<String, Task> getTaskCache() {
-        return taskCache;
-    }
-
+    @Transactional(readOnly = true)
     public List<Task> findAll() {
         return taskRepository.findAll();
     }
 
+    @Transactional(readOnly = true)
     public Task findById(Long id) {
         return taskRepository.findById(id)
                 .orElseThrow(() -> new TaskNotFoundException(id));
     }
 
+    @Transactional
     public Task create(Task task) {
-        task.setCreatedAt(LocalDateTime.now());
-        Task saved = taskRepository.save(task);
-        if (saved.getId() != null) {
-            taskCache.put(saved.getId().toString(), saved);
-        }
-        return saved;
+        return taskRepository.save(task);
     }
 
+    @Transactional
     public Task save(Task task) {
-        Task saved = taskRepository.save(task);
-        if (saved.getId() != null) {
-            taskCache.put(saved.getId().toString(), saved);
-        }
-        return saved;
+        return taskRepository.save(task);
     }
 
+    @Transactional
     public void deleteById(Long id) {
         if (!taskRepository.existsById(id)) {
             throw new TaskNotFoundException(id);
         }
         taskRepository.deleteById(id);
-        taskCache.remove(id.toString());
     }
 
+    @Transactional(readOnly = true)
     public boolean existsById(Long id) {
         return taskRepository.existsById(id);
+    }
+
+    @Transactional(
+            readOnly = false,
+            isolation = Isolation.READ_COMMITTED,
+            propagation = Propagation.REQUIRED,
+            rollbackFor = BulkOperationException.class
+    )
+    public void bulkCompleteTasks(List<Long> ids) {
+        List<Task> tasks = new ArrayList<>();
+        for (Long id : ids) {
+            Task task = taskRepository.findById(id)
+                    .orElseThrow(() -> new BulkOperationException(
+                            "Task not found with id: " + id));
+            task.setCompleted(true);
+            tasks.add(task);
+        }
+        taskRepository.saveAll(tasks);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Task> findAllWithAttachments() {
+        return taskRepository.findAllWithAttachments();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Task> findTasksDueSoon() {
+        return taskRepository.findTasksDueSoon(LocalDate.now().plusDays(7));
     }
 }

@@ -2,47 +2,56 @@ package com.example.todolist.service;
 
 import com.example.todolist.exception.AttachmentNotFoundException;
 import com.example.todolist.exception.TaskNotFoundException;
+import com.example.todolist.model.Priority;
 import com.example.todolist.model.Task;
 import com.example.todolist.model.TaskAttachment;
-import com.example.todolist.repository.InMemoryTaskAttachmentRepository;
-import com.example.todolist.repository.InMemoryTaskRepository;
+import com.example.todolist.repository.TaskAttachmentRepository;
 import com.example.todolist.repository.TaskRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.Resource;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.io.IOException;
-import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@SpringBootTest
+@ActiveProfiles("test")
 class AttachmentServiceTest {
 
-    @TempDir
-    Path tempDir;
-
+    @Autowired
     private AttachmentService attachmentService;
+
+    @Autowired
     private TaskRepository taskRepository;
 
+    @Autowired
+    private TaskAttachmentRepository attachmentRepository;
+
     @BeforeEach
-    void setUp() throws IOException {
-        taskRepository = new InMemoryTaskRepository();
-        attachmentService = new AttachmentService(
-                new InMemoryTaskAttachmentRepository(),
-                taskRepository,
-                tempDir.toString()
-        );
-        attachmentService.init();
+    void setUp() {
+        attachmentRepository.deleteAll();
+        taskRepository.deleteAll();
+    }
+
+    private Task createTask() {
+        Task task = new Task();
+        task.setTitle("Task for attachment");
+        task.setDescription("Description");
+        task.setPriority(Priority.MEDIUM);
+        return taskRepository.save(task);
     }
 
     @Test
     @DisplayName("storeAttachment saves file and metadata")
     void storeAttachment_success() throws IOException {
-        Task task = taskRepository.save(new Task(null, "T", "D", false));
+        Task task = createTask();
         MockMultipartFile file = new MockMultipartFile(
                 "file", "test.txt", "text/plain", "Hello".getBytes());
 
@@ -66,7 +75,7 @@ class AttachmentServiceTest {
     @Test
     @DisplayName("loadAsResource returns readable resource")
     void loadAsResource_success() throws IOException {
-        Task task = taskRepository.save(new Task(null, "T", "D", false));
+        Task task = createTask();
         MockMultipartFile file = new MockMultipartFile(
                 "file", "res.txt", "text/plain", "content".getBytes());
         TaskAttachment att = attachmentService.storeAttachment(task.getId(), file);
@@ -86,7 +95,7 @@ class AttachmentServiceTest {
     @Test
     @DisplayName("deleteAttachment removes file and metadata")
     void deleteAttachment_success() throws IOException {
-        Task task = taskRepository.save(new Task(null, "T", "D", false));
+        Task task = createTask();
         MockMultipartFile file = new MockMultipartFile(
                 "file", "del.txt", "text/plain", "data".getBytes());
         TaskAttachment att = attachmentService.storeAttachment(task.getId(), file);

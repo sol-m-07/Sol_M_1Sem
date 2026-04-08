@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -26,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 class TaskControllerTest {
 
     @Autowired
@@ -225,12 +227,11 @@ class TaskControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/tasks/statistics — returns statistics")
+    @DisplayName("GET /api/tasks/statistics — returns priority statistics via JDBC")
     void getStatistics_positive() throws Exception {
         mockMvc.perform(get("/api/tasks/statistics"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.primaryRepository").exists())
-                .andExpect(jsonPath("$.stubRepository").exists())
+                .andExpect(jsonPath("$").isArray())
                 .andExpect(header().string("X-API-Version", "2.0.0"));
     }
 }

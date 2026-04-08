@@ -112,6 +112,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
+    @ExceptionHandler(BulkOperationException.class)
+    public ResponseEntity<ErrorResponse> handleBulkOperation(BulkOperationException ex,
+                                                             HttpServletRequest request) {
+        ErrorResponse error = new ErrorResponse(
+                Instant.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                ex.getMessage(),
+                request.getRequestURI(),
+                null
+        );
+        return ResponseEntity.badRequest().body(error);
+    }
+
     @ExceptionHandler(TaskNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleTaskNotFound(TaskNotFoundException ex,
                                                             HttpServletRequest request) {
