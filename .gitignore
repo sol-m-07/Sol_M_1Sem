@@ -1,0 +1,5 @@
+target/
+.idea/
+uploads/
+*.iml
+task-service-stats.txt

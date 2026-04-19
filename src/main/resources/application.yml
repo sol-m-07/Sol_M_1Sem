@@ -1,0 +1,53 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: resilient-secure-http-gateway
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,circuitbreakers,circuitbreakerevents,ratelimiters
+  endpoint:
+    health:
+      show-details: always
+
+app:
+  security:
+    jwt-secret: "replace-this-secret-with-at-least-32-characters-for-hs256"
+    jwt-expiration-seconds: 3600
+    pepper: "very-secret-pepper"
+  external:
+    base-url: "http://localhost:8080"
+    connect-timeout-ms: 1000
+    read-timeout-ms: 2000
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      externalApi:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 10s
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        ignoreExceptions:
+          - com.example.todolist.exception.TaskNotFoundException
+          - io.github.resilience4j.ratelimiter.RequestNotPermitted
+        recordExceptions:
+          - com.example.todolist.exception.ExternalApiException
+          - org.springframework.web.client.ResourceAccessException
+  ratelimiter:
+    instances:
+      externalApi:
+        limitForPeriod: 5
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{traceId}] %logger{36} - %msg%n"
