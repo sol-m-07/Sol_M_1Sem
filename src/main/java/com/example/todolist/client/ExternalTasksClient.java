@@ -54,6 +54,7 @@ public class ExternalTasksClient {
                         return new TaskCreateResult(task, location);
                     }
                     throwForErrorStatus(status, body);
+                    throw new ExternalApiException("Unexpected external status " + status.value());
                 });
     }
 
