@@ -2,9 +2,9 @@ name: Build and Test
 
 on:
   push:
-    branches: [ main, master, hometask_1, hometask_2, hometask_3 ]
+    branches: [ main, master, hometask_1, hometask_2, hometask_3, hometask_4, hometask_5 ]
   pull_request:
-    branches: [ main, master, hometask_1, hometask_2, hometask_3 ]
+    branches: [ main, master, hometask_1, hometask_2, hometask_3, hometask_4, hometask_5 ]
 
 jobs:
   build:
@@ -19,10 +19,13 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Build with Maven
+      - name: Verify Docker is available (required for Testcontainers)
+        run: docker version
+
+      - name: Compile
         run: mvn -B clean compile
 
-      - name: Run tests
+      - name: Run tests (unit + slice + Testcontainers integration)
         run: mvn -B test
 
       - name: Package

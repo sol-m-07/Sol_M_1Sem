@@ -1,0 +1,56 @@
+### Build artifacts ###
+target/
+build/
+out/
+*.class
+*.jar
+*.war
+*.ear
+
+### Maven ###
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+### IDE — IntelliJ IDEA ###
+.idea/
+*.iml
+*.iws
+*.ipr
+
+### IDE — Eclipse ###
+.classpath
+.project
+.settings/
+.factorypath
+
+### IDE — VSCode ###
+.vscode/
+
+### Application data / runtime ###
+uploads/
+logs/
+*.log
+*.log.*
+task-service-stats.txt
+
+### Local config / secrets ###
+local.properties
+*.local.properties
+.env
+.env.*
+application-local.*
+
+### OS artifacts ###
+.DS_Store
+Thumbs.db
+desktop.ini
+
+### Testcontainers / Docker ###
+.testcontainers/
