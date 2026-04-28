@@ -1,5 +1,6 @@
 package com.example.todolist.repository;
 
+import com.example.todolist.config.JpaAuditingConfig;
 import com.example.todolist.model.Priority;
 import com.example.todolist.model.Task;
 import com.example.todolist.model.TaskAttachment;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
@@ -20,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import(JpaAuditingConfig.class)
 class TaskAttachmentRepositoryTest {
 
     @Autowired
